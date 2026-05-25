@@ -3,6 +3,7 @@ import requests
 import psycopg2
 from datetime import datetime, timezone
 from dotenv import load_dotenv
+from dateutil.relativedelta import relativedelta
 
 # Load environment variables from .env
 load_dotenv()
@@ -57,13 +58,33 @@ def insert_records(records):
     print(f"Inserted {len(records)} records.")
 
 if __name__ == "__main__":
-    start = "2019-01-01T00"
-    end = "2019-01-31T23"
+    conn = psycopg2.connect(
+            host=DB_HOST,
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD
+            )
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT MAX(timestamp) FROM generation WHERE respondent = 'ERCO'
+    """)
+    result = cursor.fetchone()[0]
+    cursor.close()
+    conn.close()
 
-    print(f"Fetching EIA data from {start} to {end}...")
-    response = fetch_eia_data(start, end)
-    
+    if result is None:
+        start = datetime(2019, 1, 1, tzinfo=timezone.utc)
+    else:
+        start = result + relativedelta(hours=1)
+
+    now = datetime.now(tz=timezone.utc)
+    start_str = start.astimezone(timezone.utc).strftime("%Y-%m-%dT%H")
+    end_str = now.astimezone(timezone.utc).strftime("%Y-%m-%dT%H")
+
+    print(f"Fetching EIA data from {start_str} to {end_str}...")
+    response = fetch_eia_data(start_str, end_str)
     records = response["response"]["data"]
     print(f"Retrieved {len(records)} records from EIA.")
 
-    insert_records(records)
+    if records:
+        insert_records(records)
