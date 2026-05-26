@@ -107,3 +107,21 @@ handles ongoing pulls. Two separate scripts with different purposes.
 
 **Reason:** Backfill runs once. Ingest runs on a schedule indefinitely.
 Keeping them separate makes each script simpler and easier to reason about.
+
+---
+
+## 2026-05-25 — Systemd unit files committed as reference copies
+
+**Decision:** Copy eia-ingest.service and eia-ingest.timer into systemd/
+in the project repo for documentation purposes.
+
+**Alternatives considered:** Not committing them (authoritative files only
+in /etc/systemd/system/). Using Ansible to manage system configuration.
+
+**Reason:** Documentation value outweighs the downsides for a project at
+this scale. Authoritative files remain in /etc/systemd/system/ — the
+copies in systemd/ are reference only and must be noted as such in the
+README when it is written. Ansible is a future consideration if the
+project scales to multiple servers.
+
+---
