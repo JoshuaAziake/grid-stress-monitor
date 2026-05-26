@@ -1,0 +1,13 @@
+[Unit]
+Description=EIA Grid Data Ingest
+After=postgresql.service
+
+[Service]
+Type=oneshot
+User=joshua
+WorkingDirectory=/home/joshua/grid-stress-monitor
+ExecStart=/home/joshua/grid-stress-monitor/venv/bin/python3 scripts/ingest_eia.py
+EnvironmentFile=/home/joshua/grid-stress-monitor/.env
+
+[Install]
+WantedBy=multi-user.target
