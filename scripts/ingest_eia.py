@@ -21,7 +21,6 @@ def fetch_eia_data(start, end):
             "frequency": "hourly",
             "data[]": "value",
             "facets[respondent][]": "ERCO",
-            "facets[fueltype][]": ["WND", "SUN", "NG"],
             "start": start,
             "end": end,
             "length": 5000,

@@ -22,7 +22,6 @@ def fetch_eia_data(start, end):
         "frequency": "hourly",
         "data[]": "value",
         "facets[respondent][]": "ERCO",
-        "facets[fueltype][]": ["WND", "SUN", "NG"],
         "start": start,
         "end": end,
         "length": 5000,
@@ -70,6 +69,7 @@ if __name__ == "__main__":
         print(f"Fetching {start} to {end}...")
         response = fetch_eia_data(start, end)
         records = response["response"]["data"]
+        records = [r for r in records if r["fueltype"] not in {"WND", "SUN", "NG"}]
         print(f"  Retrieved {len(records)} records.")
 
         if records:

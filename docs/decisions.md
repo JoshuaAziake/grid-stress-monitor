@@ -125,3 +125,21 @@ README when it is written. Ansible is a future consideration if the
 project scales to multiple servers.
 
 ---
+
+## 2026-06-04 — Ingest all fuel types rather than a hardcoded list
+
+**Decision:** Removed the hardcoded `["WND", "SUN", "NG"]` fueltype filter
+from both ingest_eia.py and backfill_eia.py. The API now fetches all fuel
+types for a given respondent by omitting the facets[fueltype][] parameter.
+
+**Alternatives considered:** Maintaining a whitelist of known fuel types.
+Specifying only the new fuel types to add.
+
+**Reason:** Partial generation data (only 3 of 9 fuel types) produces
+misleading analysis — total generation sums were incomplete, distorting
+ramp rate calculations. Fetching all types is more robust and picks up new
+categories automatically; this was confirmed when BAT (battery storage) and
+UES appeared in the backfill without any explicit configuration. A temporary
+exclusion filter was added to backfill_eia.py to skip already-loaded types
+during the one-time historical backfill.
+---
