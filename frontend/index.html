@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Stress Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+	* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0a0e1a;
+            color: #c9d1d9;
+            font-family: 'Courier New', monospace;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: #58a6ff;
+            margin-bottom: 0.25rem;
+        }
+
+        .subtitle {
+            font-size: 0.75rem;
+            color: #6e7681;
+            letter-spacing: 0.1em;
+            margin-bottom: 2.5rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 1.5rem;
+        }
+
+        .panel {
+            background-color: #0d1117;
+            border: 1px solid #21262d;
+            border-radius: 6px;
+            padding: 1.25rem;
+        }
+
+        .panel.wide {
+            grid-column: 1 / -1;
+        }
+
+        .panel-title {
+            font-size: 0.7rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #8b949e;
+            margin-bottom: 1rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 260px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Grid Stress Monitor</h1>
+    <p class="subtitle">ERCOT · EIA-930 · Live Data</p>
+
+    <div class="grid">
+
+        <div class="panel">
+            <div class="panel-title">NG Ramp Rate Distribution — Last 90 Days</div>
+            <div class="chart-container">
+                <canvas id="rampChart"></canvas>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">Renewable Penetration — Last 90 Days</div>
+            <div class="chart-container">
+                <canvas id="penetrationChart"></canvas>
+            </div>
+        </div>
+
+        <div class="panel wide">
+            <div class="panel-title">Duck Curve — Avg Hourly Generation by Fuel Type</div>
+            <div class="chart-container">
+                <canvas id="duckChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <script>
+	   async function loadRampRates() {
+            const end = new Date().toISOString().split('T')[0];
+            const start = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+                              .toISOString().split('T')[0];
+
+            const res = await fetch(`/api/ramp-rates?start=${start}&end=${end}`);
+            const data = await res.json();
+
+            const labels = data.map(d => d.date.split('T')[0]);
+            const maxVals = data.map(d => d.max_ramp_mw);
+            const p75Vals = data.map(d => d.p75);
+            const medVals = data.map(d => d.median);
+
+            new Chart(document.getElementById('rampChart'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Max',
+                            data: maxVals,
+                            borderColor: '#f85149',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                        },
+                        {
+                            label: 'P75',
+                            data: p75Vals,
+                            borderColor: '#d29922',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                        },
+                        {
+                            label: 'Median',
+                            data: medVals,
+                            borderColor: '#3fb950',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                        },
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#8b949e', font: { size: 11 } } }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#6e7681', maxTicksLimit: 8,
+                                     font: { size: 10 } },
+                            grid: { color: '#21262d' }
+                        },
+                        y: {
+                            ticks: { color: '#6e7681', font: { size: 10 } },
+                            grid: { color: '#21262d' }
+                        }
+                    }
+                }
+            });
+        }
+	   async function loadPenetration() {
+            const end = new Date().toISOString().split('T')[0];
+            const start = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+                              .toISOString().split('T')[0];
+
+            const res = await fetch(`/api/renewable-penetration?start=${start}&end=${end}`);
+            const data = await res.json();
+
+            const labels = data.map(d => d.date.split('T')[0]);
+            const vals = data.map(d => (d.vre_fraction * 100).toFixed(1));
+
+            new Chart(document.getElementById('penetrationChart'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'VRE Fraction (%)',
+                            data: vals,
+                            borderColor: '#58a6ff',
+                            backgroundColor: 'rgba(88, 166, 255, 0.08)',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            fill: true,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#8b949e', font: { size: 11 } } }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#6e7681', maxTicksLimit: 8,
+                                     font: { size: 10 } },
+                            grid: { color: '#21262d' }
+                        },
+                        y: {
+                            ticks: { color: '#6e7681', font: { size: 10 } },
+                            grid: { color: '#21262d' }
+                        }
+                    }
+                }
+            });
+        }
+	   async function loadDuckCurve() {
+            const end = new Date().toISOString().split('T')[0];
+            const start = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+                              .toISOString().split('T')[0];
+
+            const res = await fetch(`/api/duck-curve?start=${start}&end=${end}`);
+            const data = await res.json();
+
+            const labels = data.map(d => `${d.hour}:00`);
+            const ngVals = data.map(d => d.NG);
+            const windVals = data.map(d => d.WND);
+            const solarVals = data.map(d => d.SUN);
+
+            new Chart(document.getElementById('duckChart'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Natural Gas',
+                            data: ngVals,
+                            borderColor: '#f85149',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                        },
+                        {
+                            label: 'Wind',
+                            data: windVals,
+                            borderColor: '#3fb950',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                        },
+                        {
+                            label: 'Solar',
+                            data: solarVals,
+                            borderColor: '#d29922',
+                            backgroundColor: 'rgba(210, 153, 34, 0.08)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: true,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#8b949e', font: { size: 11 } } }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#6e7681', font: { size: 10 } },
+                            grid: { color: '#21262d' }
+                        },
+                        y: {
+                            ticks: { color: '#6e7681', font: { size: 10 } },
+                            grid: { color: '#21262d' }
+                        }
+                    }
+                }
+            });
+        }
+	loadRampRates();
+        loadPenetration();
+        loadDuckCurve();
+    </script>
+</body>
+</html>
+
+
