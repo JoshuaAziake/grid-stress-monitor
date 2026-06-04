@@ -178,3 +178,20 @@ than an arbitrary cutoff and correctly handles the dataset's evolution over
 time.
 
 ---
+
+## Duck curve endpoint averaging window
+
+**Decision:** The `/api/duck-curve` endpoint averages hourly generation profiles
+across the caller-supplied date range without any internal year-by-year breakdown.
+The caller is responsible for keeping the window tight and temporally meaningful
+(e.g. a single season or year).
+
+**Alternatives considered:** Adding a `year` parameter that returns one profile per
+calendar year in a single response, making year-over-year comparison explicit and
+preventing accidental multi-year averaging.
+
+**Reason:** A wide range spanning multiple years produces a profile dominated by
+earlier years when solar capacity was lower, understating current solar penetration.
+Keeping windows tight avoids this. The single-parameter approach is simpler and
+already correct — the year parameter option is deferred as a future enhancement
+if the frontend needs side-by-side annual comparisons.
