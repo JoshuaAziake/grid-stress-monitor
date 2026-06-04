@@ -142,4 +142,39 @@ categories automatically; this was confirmed when BAT (battery storage) and
 UES appeared in the backfill without any explicit configuration. A temporary
 exclusion filter was added to backfill_eia.py to skip already-loaded types
 during the one-time historical backfill.
+
+---
+
+## 2026-06-04 — Data quality: missing fuel type rows at month boundaries
+
+**Decision:** Documented as a known data quality issue. Certain hours —
+consistently at month boundaries — have missing rows for some fuel types
+in the EIA source data. This causes SUM(value_mw) to undercount total
+generation at those hours, producing large artificial negative deltas in
+ramp rate calculations.
+
+**Alternatives considered:** Treating as real grid events (incorrect).
+
+**Reason:** Confirmed by inspection: 2024-09-30 19:00 shows only NG, SUN,
+WND present while surrounding hours have all 7 fuel types. The artifact
+signature is missing rows rather than zero values, causing sum-based
+calculations to be unreliable at those timestamps.
+
+---
+
+## 2026-06-04 — Ramp rate filtering based on fuel type availability
+
+**Decision:** Filter out hours where the reporting fuel type count is below
+the expected count for that era before computing ramp rates. Three eras
+defined by fuel type availability: pre-2019-01-02 (3 types: WND, SUN, NG),
+2019-01-02 to 2024-11-07 (7 types: add COL, NUC, WAT, OTH), post-2024-11-07
+(8+ types: add BAT and briefly UES).
+
+**Alternatives considered:** Hardcoding a single minimum threshold. Excluding
+month-boundary hours entirely.
+
+**Reason:** Threshold tied to known availability windows is more principled
+than an arbitrary cutoff and correctly handles the dataset's evolution over
+time.
+
 ---

@@ -34,3 +34,61 @@ Update this file whenever a new concept appears in the code or data.
 **Respondent** - EIA's term for a balancing authority or RTO reporting data. In the database, the respondent column contains codes like ERCOT, PJM, MISO that identify which entity reported the data.
 
 **Balancing Authority** - an entity responsible for maintaining the real-time balance between generation and load within a defined area. RTOs are balancing authorities, but not all balancing authorities are RTOs - some utilities balance their own areas independently.
+
+---
+
+## Dispatchability and the balancing role of natural gas
+
+Grid generation sources vary in how quickly they can respond to changes
+in demand or renewable output.
+
+**Natural gas** is the most dispatchable source — gas turbines can ramp
+up or down within minutes. ERCOT uses NG as the primary balancing fuel,
+absorbing variability from wind and solar in real time.
+
+**Coal** is technically dispatchable but slow — plants take hours to ramp
+meaningfully. In practice coal runs at relatively steady baseload output.
+
+**Nuclear** runs at essentially constant output by design. It does not
+participate in short-term balancing.
+
+**Hydro** is flexible in principle but limited by water availability.
+ERCOT has minimal hydro capacity.
+
+**Wind and solar** are non-dispatchable — they generate whenever the
+resource is available, regardless of grid needs.
+
+The practical implication for stress analysis: NG ramp rate is the most
+informative single signal for grid stress under renewable integration.
+When solar drops at sunset or wind drops unexpectedly, NG absorbs the
+gap. The magnitude and speed of NG ramp events measures how hard the
+dispatchable fleet is being pushed.
+
+Net load (total demand minus wind and solar) is the canonical metric
+for this stress — it represents the residual demand that dispatchable
+sources must serve. A steeper net load ramp means more stress.
+
+---
+
+## NG ramp rate as a grid stress signal
+
+Large upward NG ramp events — hours where natural gas generation increases
+rapidly — are the primary measurable stress signal in this dataset. They
+occur in two main contexts:
+
+**Winter evening ramps:** Solar drops to zero at sunset while heating
+demand spikes. Gas must cover both simultaneously. These events cluster
+at 17:00-19:00 in January and February and are growing in magnitude as
+solar penetration increases year over year.
+
+**Post-wind-event recovery:** When wind drops sharply after a high
+generation period, gas must ramp up rapidly to replace it. The largest
+single-hour NG ramps in the dataset (2019-2020) are morning recoveries
+after overnight wind events pushed NG to near zero.
+
+Large negative NG ramps (gas backing down fast) have two causes:
+wind flooding the grid overnight, and solar morning ramp-up displacing
+gas. These are generally routine dispatch events rather than stress
+events, though they indicate increasing renewable integration pressure.
+
+---
