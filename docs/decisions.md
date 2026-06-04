@@ -195,3 +195,42 @@ earlier years when solar capacity was lower, understating current solar penetrat
 Keeping windows tight avoids this. The single-parameter approach is simpler and
 already correct — the year parameter option is deferred as a future enhancement
 if the frontend needs side-by-side annual comparisons.
+
+---
+
+## HTTPS with self-signed certificate
+
+**Decision:** Use a self-signed TLS certificate generated with `openssl req -x509`
+for HTTPS on the VPS.
+
+**Alternatives considered:** Let's Encrypt / Certbot for a trusted certificate.
+Requires a domain name — not available on a raw IP address. Deferred until a
+domain is added to the project.
+
+**Reason:** A self-signed cert provides encrypted transport without requiring a
+domain. Browsers show a security warning on first visit which must be clicked
+through once. Acceptable for a personal project on a raw IP. The certificate
+expires in 365 days and must be regenerated manually, or replaced with a
+Let's Encrypt cert if a domain is added. Cert lives at
+`/etc/ssl/certs/grid-stress-monitor.crt`, key at
+`/etc/ssl/private/grid-stress-monitor.key`.
+
+---
+
+## Frontend served from /srv/, not directly from repo
+
+**Decision:** Serve frontend files from `/srv/grid-stress-monitor/frontend/`
+with a symlink at `/var/www/grid-stress-monitor`. A deploy script
+(`scripts/deploy_frontend.sh`) copies from the repo to `/srv/` when changes
+are ready to publish.
+
+**Alternatives considered:** Serving directly from the repo via a symlink at
+`/var/www/grid-stress-monitor -> /home/joshua/grid-stress-monitor/frontend`.
+Rejected because `/home/joshua/` has `700` permissions — Nginx runs as `nobody`
+and cannot traverse the home directory.
+
+**Reason:** `/srv/` is world-readable and the conventional location for
+system-served data on Linux. Separating the working copy (repo) from the
+serving location (`/srv/`) also follows standard deployment practice — the
+deploy script is the explicit publishing step. Workflow: edit in repo, commit,
+run `scripts/deploy_frontend.sh` to publish.
