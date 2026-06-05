@@ -179,7 +179,7 @@ time.
 
 ---
 
-## Duck curve endpoint averaging window
+## 2026-06-04 — Duck curve endpoint averaging window
 
 **Decision:** The `/api/duck-curve` endpoint averages hourly generation profiles
 across the caller-supplied date range without any internal year-by-year breakdown.
@@ -198,7 +198,7 @@ if the frontend needs side-by-side annual comparisons.
 
 ---
 
-## HTTPS with self-signed certificate
+##  2026-06-04 — HTTPS with self-signed certificate
 
 **Decision:** Use a self-signed TLS certificate generated with `openssl req -x509`
 for HTTPS on the VPS.
@@ -217,7 +217,7 @@ Let's Encrypt cert if a domain is added. Cert lives at
 
 ---
 
-## Frontend served from /srv/, not directly from repo
+##  2026-06-04 — Frontend served from /srv/, not directly from repo
 
 **Decision:** Serve frontend files from `/srv/grid-stress-monitor/frontend/`
 with a symlink at `/var/www/grid-stress-monitor`. A deploy script
@@ -234,3 +234,13 @@ system-served data on Linux. Separating the working copy (repo) from the
 serving location (`/srv/`) also follows standard deployment practice — the
 deploy script is the explicit publishing step. Workflow: edit in repo, commit,
 run `scripts/deploy_frontend.sh` to publish.
+
+---
+
+## 2026-06-05 - Keep current SQL queries in Python script
+
+**Decision:** Keep duck curve, ramp rate, and renewable penetration analytics in SQL via Flask. Do not reimplement in C++.
+
+**Alternatives considered:** Reimplement aggregation logic in C++ using libpq, fetching raw rows from Postgres and computing averages and distributions in compiled code.
+
+**Reason:** At current and projected data volumes, Postgres handles these aggregations in milliseconds. SQL is the right tool for set-based aggregation — moving it to C++ would be premature optimization with no meaningful performance gain. C++ enters the project in Phase F for DC power flow and N-1 contingency screening, computations that SQL cannot perform at all. Keeping the boundary clean — SQL for aggregation, C++ for numerical methods — makes the architecture easier to reason about and avoids introducing complexity without justification.
