@@ -21,9 +21,23 @@ SSH into VPS:
 Three systemd services run on the VPS: nginx, flask, postgresql.
 
 Check status of all three:
-    sudo systemctl status nginx
-    sudo systemctl status flask
-    sudo systemctl status postgresql
+    sudo systemctl status nginx flask postgresql 
+
+Check health status:
+    curl -s http://localhost:5000/health
+    curl -s http://178.105.208.98/health
+
+List databases:
+    sudo -u postgres psql -c "\l"
+
+Row count:
+    sudo -u postgres psql -d griddb -c "SELECT COUNT(*) FROM generation;"
+
+Timer schedule:
+    systemctl list-timers eia-ingest.timer
+
+Ingest logs:
+    journalctl -u eia-ingest.service -n 20
 
 Restart a service:
     sudo systemctl restart X
@@ -84,6 +98,9 @@ Nginx proxies all public HTTP traffic to Flask on port 5000.
 
 Test nginx config is valid before restarting:
     sudo nginx -t
+
+Reload nginx:
+    sudo systemctl reload nginx
 
 View access logs:
     sudo tail -f /var/log/nginx/access.log
