@@ -244,3 +244,20 @@ run `scripts/deploy_frontend.sh` to publish.
 **Alternatives considered:** Reimplement aggregation logic in C++ using libpq, fetching raw rows from Postgres and computing averages and distributions in compiled code.
 
 **Reason:** At current and projected data volumes, Postgres handles these aggregations in milliseconds. SQL is the right tool for set-based aggregation — moving it to C++ would be premature optimization with no meaningful performance gain. C++ enters the project in Phase F for DC power flow and N-1 contingency screening, computations that SQL cannot perform at all. Keeping the boundary clean — SQL for aggregation, C++ for numerical methods — makes the architecture easier to reason about and avoids introducing complexity without justification.
+
+---
+
+## 2026-06-07
+
+**Decision:** Store network topology tables (buses, branches, generators) in a
+dedicated `network` Postgres schema rather than the default `public` schema.
+
+**Alternatives considered:** Adding all tables to `public` alongside the existing
+`generation` table.
+
+**Reason:** The two data categories are fundamentally different in nature.
+`public.generation` is time-series operational data ingested hourly from EIA.
+`network.buses`, `network.branches`, `network.generators` are static topology
+loaded once from the IEEE 118-bus test case. Keeping them in separate schemas
+makes that distinction explicit and prevents the database from becoming an
+undifferentiated pile of tables as the project grows.

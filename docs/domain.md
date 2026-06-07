@@ -92,3 +92,128 @@ gas. These are generally routine dispatch events rather than stress
 events, though they indicate increasing renewable integration pressure.
 
 ---
+
+## Network Topology
+
+**Bus** - a node in the power network. Physically represents a substation
+or a point where transmission lines, generators, and loads connect.
+Every element in the network connects to a bus. Buses are numbered and
+have a type:
+- Type 1 (load bus / PQ bus): has fixed real and reactive power demand.
+  Voltage magnitude and angle are solved by the power flow.
+- Type 2 (generator bus / PV bus): has a generator maintaining a fixed
+  voltage magnitude. Real power output is specified; voltage angle is solved.
+- Type 3 (slack bus / reference bus): the single reference node for the
+  whole network. Its voltage angle is fixed at zero by convention, giving
+  all other angles something to be measured against. Also absorbs any
+  mismatch between total generation and total load.
+
+**Branch** - a connection between two buses. Represents either a
+transmission line or a transformer. Has a resistance and reactance
+(impedance), which determines how much power flows through it for a
+given voltage angle difference. Branches have thermal limits — a maximum
+MW flow before they overheat. Exceeding a branch limit is the failure
+mode N-1 analysis looks for.
+
+**Base MVA** - power systems equations are written in per-unit notation,
+normalizing all quantities relative to a chosen base. The case118 base
+is 100 MVA. This means a branch limit of 1.0 per-unit = 100 MW. Using
+per-unit keeps the numbers well-conditioned for matrix arithmetic.
+
+**baseKV** - the nominal voltage level of a bus. The IEEE 118-bus case
+has two voltage levels: 138 kV and 345 kV. Transformers connect buses
+at different voltage levels. DC power flow treats voltages as uniform
+and ignores this distinction — it only matters for AC flow.
+
+**N-1 Contingency** - a planning standard requiring that the grid remain
+stable after the sudden loss of any single component (a transmission line,
+transformer, or generator). If losing one element causes cascading failures,
+the grid fails the N-1 standard.
+
+In this project, N-1 screening works as follows: run a base-case DC power
+flow to find flows on all branches. Then, for each branch in the network,
+remove it and re-run the power flow. If any remaining branch now exceeds
+its thermal limit, that contingency is flagged as a violation. With 186
+branches in case118, this means 186 power flow solves per screening run.
+
+**DC Power Flow** - a linearized approximation of the full AC power flow
+equations. Assumes voltage magnitudes are constant and equal everywhere,
+and that angle differences between buses are small. Under these assumptions
+the power flow equations reduce to a linear system: P = B * theta, where
+P is the vector of net injections (generation minus load) at each bus, B
+is the network susceptance matrix (built from branch reactances), and theta
+is the vector of unknown voltage angles. Solving this linear system gives
+the angle at every bus, from which branch flows are calculated directly.
+DC power flow cannot model reactive power, voltage magnitudes, or losses —
+but it is accurate enough for contingency screening and is standard practice
+in transmission planning.
+
+**Susceptance Matrix (B matrix)** - the key data structure in DC power
+flow. An NxN matrix where N is the number of buses. Diagonal entries are
+the sum of susceptances of all branches connected to that bus. Off-diagonal
+entry B[i][j] is the negative susceptance of the branch connecting bus i
+to bus j, or zero if no direct branch exists. Built entirely from the
+network topology and branch reactances. Inverting (or factoring) this
+matrix is the main computational step in DC power flow.
+
+---
+
+## Case118 Data Dictionary
+
+All quantities are in per-unit on a 100 MVA base unless otherwise noted.
+Source: MATPOWER case118.m, IEEE 118-bus test case.
+
+### mpc.bus columns
+
+| Column | Name    | Units | Description                                              | Used? |
+|--------|---------|-------|----------------------------------------------------------|-------|
+| 1      | bus_i   | -     | Bus number (1-118). Primary key.                         | Yes   |
+| 2      | type    | -     | 1=load, 2=generator (PV), 3=slack (reference)           | Yes   |
+| 3      | Pd      | MW    | Real power demand (load) at this bus                     | Yes   |
+| 4      | Qd      | MVAr  | Reactive power demand. AC only, ignored in DC flow.      | No    |
+| 5      | Gs      | MW    | Shunt conductance. Ignored in DC flow.                   | No    |
+| 6      | Bs      | MVAr  | Shunt susceptance. Ignored in DC flow.                   | No    |
+| 7      | area    | -     | Area number. Not used in power flow.                     | No    |
+| 8      | Vm      | pu    | Voltage magnitude. DC flow assumes 1.0 everywhere.       | No    |
+| 9      | Va      | deg   | Voltage angle. This is what DC flow solves for.          | Yes*  |
+| 10     | baseKV  | kV    | Nominal voltage (138 or 345 kV in this case).            | No    |
+| 11     | zone    | -     | Loss zone. Not used in power flow.                       | No    |
+| 12     | Vmax    | pu    | Maximum voltage limit. AC only.                          | No    |
+| 13     | Vmin    | pu    | Minimum voltage limit. AC only.                          | No    |
+
+*Va in the file is the solved value from the original AC power flow.
+DC flow will solve for its own angles from scratch.
+
+### mpc.gen columns
+
+| Column | Name   | Units | Description                                              | Used? |
+|--------|--------|-------|----------------------------------------------------------|-------|
+| 1      | bus    | -     | Bus number this generator is connected to.               | Yes   |
+| 2      | Pg     | MW    | Real power output.                                       | Yes   |
+| 3      | Qg     | MVAr  | Reactive power output. AC only.                          | No    |
+| 4      | Qmax   | MVAr  | Max reactive output. AC only.                            | No    |
+| 5      | Qmin   | MVAr  | Min reactive output. AC only.                            | No    |
+| 6      | Vg     | pu    | Voltage setpoint. AC only.                               | No    |
+| 7      | mBase  | MVA   | Machine MVA base. Usually 100.                           | No    |
+| 8      | status | -     | 1=in service, 0=out of service.                          | Yes   |
+| 9      | Pmax   | MW    | Maximum real power output.                               | Yes   |
+| 10     | Pmin   | MW    | Minimum real power output.                               | Yes   |
+| 11-21  | ...    | -     | AGC, ramp rates, cost curve params. Not used here.       | No    |
+
+### mpc.branch columns
+
+| Column | Name   | Units | Description                                              | Used? |
+|--------|--------|-------|----------------------------------------------------------|-------|
+| 1      | fbus   | -     | "From" bus number.                                       | Yes   |
+| 2      | tbus   | -     | "To" bus number.                                         | Yes   |
+| 3      | r      | pu    | Resistance. Small in DC flow; often approximated as 0.   | No    |
+| 4      | x      | pu    | Reactance. Susceptance = 1/x. Core of DC power flow.     | Yes   |
+| 5      | b      | pu    | Line charging susceptance. AC only.                      | No    |
+| 6      | rateA  | MW    | Thermal limit (normal). The N-1 violation threshold.     | Yes   |
+| 7      | rateB  | MW    | Thermal limit (short-term emergency). Not used here.     | No    |
+| 8      | rateC  | MW    | Thermal limit (emergency). Not used here.                | No    |
+| 9      | ratio  | -     | Transformer tap ratio. 0 means transmission line.        | Yes   |
+| 10     | angle  | deg   | Transformer phase shift. Usually 0.                      | No    |
+| 11     | status | -     | 1=in service, 0=out of service.                          | Yes   |
+| 12     | angmin | deg   | Min angle difference. Usually -360 (unconstrained).      | No    |
+| 13     | angmax | deg   | Max angle difference. Usually 360 (unconstrained).       | No    |
