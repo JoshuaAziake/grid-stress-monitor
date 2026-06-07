@@ -261,3 +261,20 @@ dedicated `network` Postgres schema rather than the default `public` schema.
 loaded once from the IEEE 118-bus test case. Keeping them in separate schemas
 makes that distinction explicit and prevents the database from becoming an
 undifferentiated pile of tables as the project grows.
+
+---
+
+## 2026-06-07
+
+**Decision:** Grant flask user USAGE on the network schema and INSERT/SELECT
+on its tables and sequences, rather than running the parser as the postgres
+superuser.
+
+**Alternatives considered:** Running parse_case118 as postgres directly.
+
+**Reason:** The app should never connect as a superuser. Explicit grants give
+flask exactly the permissions it needs and nothing more. This is consistent
+with the principle of least privilege and the existing pattern for the
+public schema.
+
+---

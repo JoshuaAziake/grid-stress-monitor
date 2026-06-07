@@ -1,3 +1,4 @@
 .env
 venv/
 src/analytics/smoke_test
+bin/
